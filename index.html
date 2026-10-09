@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>✈️ 도쿄 여행 실시간 보관함 (2026.10.31 ~ 11.04 5일간)</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    :root {
+      --primary: #e63946; --primary-hover: #d62828; --bg: #f5f7fa; --card-bg: #fff;
+      --text: #2b2d42; --muted: #6c757d; --border: #e2e8f0; --radius: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg); color: var(--text); line-height: 1.5; padding-bottom: 90px; }
+    header { background: linear-gradient(135deg, #1d3557, #3a6073); color: #fff; padding: 20px 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .header-container { max-width: 1040px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .title-group h1 { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+    .title-group p { font-size: 13px; opacity: 0.95; margin-top: 3px; font-weight: 500; }
+    .status-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .dday-badge { background: rgba(255,255,255,0.22); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; border: 1px solid rgba(255,255,255,0.4); }
+    .sync-status-badge { background: rgba(0,0,0,0.25); padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #48bb78; box-shadow: 0 0 8px #48bb78; }
+    .btn { padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 5px; }
+    .btn-light { background: #fff; color: #1d3557; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .main-container { max-width: 1040px; margin: 16px auto; padding: 0 16px; }
+    .sync-toast { background: #ebf8ff; border-left: 4px solid #3182ce; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; color: #2b6cb0; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .quick-bar { background: var(--card-bg); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border: 1px solid var(--border); }
+    .quick-links { display: flex; gap: 6px; flex-wrap: wrap; }
+    .quick-link-btn { padding: 5px 10px; background: #edf2f7; border-radius: 6px; font-size: 12px; color: #2d3748; text-decoration: none; font-weight: 600; }
+    .calc-box { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+    .calc-box input { width: 70px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-weight: 600; text-align: right; }
+    .search-input { width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); font-size: 14px; outline: none; margin-bottom: 10px; }
+    .category-pills { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 16px; }
+    .pill { padding: 6px 14px; background: #fff; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap; }
+    .pill.active { background: #1d3557; color: #fff; border-color: #1d3557; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; }
+    .card { background: var(--card-bg); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.04); overflow: hidden; display: flex; flex-direction: column; }
+    .card-content { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+    .card-header-line { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+    .category-badge { font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 6px; }
+    .badge-flight { background: #e0edff; color: #2563eb; }
+    .badge-hotel { background: #f0e6ff; color: #7c3aed; }
+    .badge-food { background: #ffe5ec; color: #db2777; }
+    .badge-ticket { background: #ffede0; color: #ea580c; }
+    .badge-memo { background: #e8f7e4; color: #16a34a; }
+    .status-badge { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #c6f6d5; color: #22543d; }
+    .card-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; line-height: 1.35; }
+    .card-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .card-meta-list { font-size: 13px; display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; background: #f8fafc; padding: 8px 10px; border-radius: 8px; border: 1px solid #edf2f7; }
+    .meta-item { display: flex; justify-content: space-between; align-items: center; }
+    .meta-label { color: var(--muted); font-size: 12px; }
+    .meta-val { font-weight: 600; }
+    .meta-code { font-family: monospace; background: #edf2f7; padding: 1px 5px; border-radius: 4px; color: #2563eb; }
+    .card-memo { font-size: 13px; color: #4a5568; background: #fffdf5; border-left: 3px solid #f6ad55; padding: 7px 9px; border-radius: 4px; margin-bottom: 10px; white-space: pre-wrap; word-break: break-word; }
+    /* 캡처 사진 하단 배치 */
+    .card-image-wrap { width: 100%; height: 165px; background: #edf2f7; border-radius: 8px; border: 1px solid var(--border); position: relative; cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 4px; margin-bottom: 10px; }
+    .card-image-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .no-image-placeholder { color: #a0aec0; font-size: 12px; display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 6px 10px; background: #f8fafc; border: 1px dashed #cbd5e0; border-radius: 6px; margin-bottom: 8px; }
+    .image-zoom-badge { position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.65); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+    .card-footer { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .card-action-btn { background: none; border: none; color: #718096; font-size: 12px; cursor: pointer; padding: 3px 6px; border-radius: 4px; font-weight: 600; }
+    .card-action-btn:hover { background: #edf2f7; color: var(--text); }
+    .card-action-btn.delete:hover { background: #fed7d7; color: #c53030; }
+    .fab-btn { position: fixed; bottom: 24px; right: 24px; background: var(--primary); color: #fff; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; border: none; box-shadow: 0 4px 14px rgba(230,57,70,0.4); cursor: pointer; z-index: 99; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(3px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 16px; }
+    .modal-overlay.active { display: flex; }
+    .modal-box { background: #fff; border-radius: 14px; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 700; position: sticky; top: 0; background: #fff; }
+    .close-btn { background: none; border: none; font-size: 22px; color: #a0aec0; cursor: pointer; }
+    .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #4a5568; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-input, .form-select, .form-textarea { width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid #cbd5e0; font-size: 14px; outline: none; }
+    .file-drop-area { border: 2px dashed #cbd5e0; border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; background: #f8fafc; font-size: 13px; font-weight: 600; color: #4a5568; }
+    .image-preview-box { position: relative; margin-top: 8px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); max-height: 200px; display: flex; justify-content: center; background: #2d3748; }
+    .image-preview-box img { max-height: 200px; object-fit: contain; width: 100%; }
+    .remove-img-btn { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.7); color: #fff; border: none; padding: 3px 6px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+    .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; background: #f8fafc; }
+    .lightbox-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 16px; }
+    .lightbox-overlay.active { display: flex; }
+    .lightbox-img { max-width: 95vw; max-height: 90vh; border-radius: 8px; object-fit: contain; }
+    .lightbox-close { position: absolute; top: 16px; right: 16px; color: #fff; font-size: 32px; background: none; border: none; cursor: pointer; }
+    .empty-state { text-align: center; padding: 50px 20px; color: #a0aec0; grid-column: 1 / -1; }
+    .guide-box { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.6; color: #4a5568; }
+    .view-switch { display:flex; gap:8px; margin-bottom:14px; }
+    .view-tab { flex:1; min-width:0; font-size:12px; background:#fff; border:1px solid var(--border); border-radius:10px; padding:11px 8px; font-weight:700; color:var(--muted); cursor:pointer; }
+    .view-tab.active { background:#1d3557; border-color:#1d3557; color:white; }
+    .day-tabs { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; margin-bottom:14px; }
+    .day-tab { background:white; padding:10px 3px; border:1px solid var(--border); border-radius:10px; cursor:pointer; font-size:12px; font-weight:700; }
+    .day-tab.active { background:#e0edff; color:#1d3557; border-color:#1d3557; }
+    .day-schedule { display:flex; flex-direction:column; gap:10px; }
+    .schedule-entry { background:white; border:1px solid var(--border); border-radius:12px; padding:14px; }
+    .schedule-entry strong { display:block; font-size:15px; margin:6px 0; }
+    .schedule-entry small { color:var(--muted); }
+    .schedule-hint { color:var(--muted); font-size:12px; margin:12px 0; }
+    .sync-dot.offline { background:#ef4444; box-shadow:none; }
+    .sync-dot.loading { background:#f59e0b; box-shadow:none; }
+    /* 방문 및 변경 기록, 3명 개인 메모 */
+    .traveler-select { border:1px solid rgba(255,255,255,.55); border-radius:8px; padding:7px; background:#fff; color:#1d3557; max-width:135px; font-size:13px; font-weight:700; }
+    .section-panel { background:#fff; border:1px solid var(--border); border-radius:14px; padding:15px; margin-bottom:16px; }
+    .section-panel h2 { font-size:17px; margin-bottom:7px; }
+    .section-note { font-size:12px; color:var(--muted); margin-bottom:12px; line-height:1.6; }
+    .notes-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .notes-column { min-width:0; background:#f8fafc; border:1px solid var(--border); border-radius:12px; padding:11px; }
+    .notes-column h3 { font-size:14px; margin-bottom:10px; }
+    .memo-entry { background:#fff; border:1px solid var(--border); border-radius:9px; padding:12px; margin-bottom:8px; overflow-wrap:anywhere; }
+    .memo-entry p { white-space:pre-wrap; margin:7px 0; font-size:13px; }
+    .memo-entry small { display:block; color:var(--muted); font-size:11px; }
+    .memo-actions { display:flex; gap:7px; justify-content:flex-end; margin-top:6px; }
+    .stacked-controls { display:flex; flex-wrap:wrap; align-items:end; gap:8px; }
+    .log-entry { background:#fff; padding:12px; border:1px solid var(--border); border-radius:10px; margin-bottom:8px; overflow-wrap:anywhere; }
+    .log-entry small { display:block; color:var(--muted); margin-top:4px; }
+    .log-changes { margin-top:8px; padding:9px; background:#f8fafc; border-radius:8px; font-size:12px; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .alert-warning { background:#fff8e9; color:#92400e; border:1px solid #f6d89a; padding:10px; font-size:12px; border-radius:9px; margin-bottom:12px; }
+    .person-badge { display:inline-block; background:#e0edff; color:#1d3557; border-radius:16px; padding:2px 8px; font-size:12px; font-weight:700; }
+    @media (max-width: 760px) { .notes-grid { grid-template-columns:1fr; } }
+    @media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } .quick-bar { flex-direction: column; align-items: flex-start; } }
+    @media print { header, .quick-bar, .search-input, .category-pills, .fab-btn, .card-footer, .sync-toast, .view-switch { display: none !important; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-container">
+      <div class="title-group">
+        <h1>🗼 도쿄 여행 보관함 <span>2026</span></h1>
+        <p>🗓️ 2026.10.31(토) ~ 11.04(수) 5일간 (4박 5일)</p>
+      </div>
+        <div class="status-group">
+          <label for="travelerSelector" style="font-size:12px;">👤 내 이름</label>
+          <select id="travelerSelector" class="traveler-select" aria-label="여행자 선택" onchange="chooseTraveler(this.value)">
+            <option value="">여행자 선택</option>
+            <option value="t1">쩝</option>
+            <option value="t2">발</option>
+            <option value="t3">명</option>
+          </select>
+        <div class="dday-badge" id="ddayBadge">🗓️ 도쿄 D-24 (2026.10.31 ~ 11.04 5일간)</div>
+        <div class="sync-status-badge" onclick="openCloudModal()">
+          <span class="sync-dot loading" id="syncDot"></span>
+          <span id="syncStatusText">연결 확인 중</span>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-light" onclick="openShareModal()">📤 백업</button>
+          <button class="btn btn-primary" onclick="openAddModal()">➕ 예약 등록</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <div class="sync-toast">
+      <span>☁️ <strong>클라우드:</strong> <span id="cloudNotice">예약정보를 불러오는 중입니다.</span></span>
+      <button class="card-action-btn" onclick="openCloudModal()" style="color:#2b6cb0;">설정</button>
+    </div>
+
+    <div class="quick-bar">
+      <div class="quick-links">
+        <a class="quick-link-btn" href="https://services.digital.go.jp/ko/visit-japan-web/" target="_blank" rel="noopener">🌐 Visit Japan Web (입국QR)</a>
+        <a class="quick-link-btn" href="https://www.tokyometro.jp/kr/subwaymap/" target="_blank" rel="noopener">🚇 도쿄 지하철 노선도</a>
+        <a class="quick-link-btn" href="https://maps.google.com/?q=Tokyo" target="_blank" rel="noopener">🗺️ 구글 지도</a>
+        <button class="quick-link-btn" onclick="window.print()" style="border:none; cursor:pointer;">🖨️ 인쇄</button>
+      </div>
+      <div class="calc-box">
+        <span title="참고용 고정환율 (100엔 = 920원), 실시간 환율 아님">💴 엔화 계산기 (예시 환율):</span>
+        <input type="number" id="jpyInput" value="1000" oninput="calcExchange()">
+        <span>엔 ≈</span>
+        <strong id="krwResult" style="color: #e63946;">9,200원</strong>
+      </div>
+    </div>
+
+    <!-- 신규 일정표는 기존 Firebase 예약 데이터를 읽기만 합니다. -->
+    <div class="view-switch" role="group" aria-label="보기 선택">
+      <button class="view-tab active" id="tabReservations" onclick="switchView('reservations')">📋 예약 목록</button>
+      <button class="view-tab" id="tabSchedule" onclick="switchView('schedule')">🗓️ 날짜별 일정</button>
+      <button class="view-tab" id="tabNotes" onclick="switchView('notes')">👥 3인 메모</button>
+      <button class="view-tab" id="tabHistory" onclick="switchView('history')">🕘 이용 이력</button>
+    </div>
+    <section id="scheduleView" style="display:none" aria-label="날짜별 일정">
+      <div class="day-tabs" id="dayTabs"></div>
+      <div id="daySchedule" class="day-schedule"></div>
+      <p class="schedule-hint">기존 예약의 ‘일시 / 날짜’에서 2026-10-31 형식의 날짜를 자동으로 읽습니다. 일시를 인식할 수 없는 예약은 목록에서 계속 확인할 수 있습니다.</p>
+    </section>
+    <section id="notesView" style="display:none" aria-label="여행자별 메모">
+      <div class="section-panel">
+        <h2>👥 여행자별 메모 게시판</h2>
+        <p class="section-note">세 사람이 각각 메모를 남기고 함께 읽을 수 있습니다. 먼저 상단에서 본인의 여행자를 선택하세요. 작성자의 메모는 본인 선택 상태에서만 수정·삭제 버튼이 나타납니다.</p>
+        <div id="notesStorageNotice" class="alert-warning" style="display:none"></div>
+        <div class="form-group" style="margin-bottom:10px"><label for="personalMemoInput">새 메모</label>
+          <textarea id="personalMemoInput" class="form-textarea" rows="3" maxlength="4000" placeholder="일정 아이디어, 준비할 물건, 친구들과 공유할 내용"></textarea>
+        </div>
+        <div class="stacked-controls" style="margin-bottom:16px">
+          <div class="form-group" style="flex:1;min-width:170px"><label for="memoBookingLink">예약과 연결 (선택)</label><select id="memoBookingLink" class="form-select"><option value="">연결하지 않음</option></select></div>
+          <button class="btn btn-primary" onclick="addPersonalNote()">＋ 내 메모 저장</button>
+        </div>
+        <div id="personalNotesColumns" class="notes-grid"></div>
+      </div>
+    </section>
+    <section id="historyView" style="display:none" aria-label="접속 이력 및 수정 이력">
+      <div class="section-panel">
+        <h2>🕘 접속·수정 이력</h2>
+        <p class="section-note">업데이트 적용 후 기록되는 내역입니다. 과거 이력은 소급 생성할 수 없습니다. 접속 이력은 여행자 선택 후 사이트를 열었을 때 기록합니다. 시간은 한국 시간(KST) 기준입니다.</p>
+        <div id="historyStorageNotice" class="alert-warning" style="display:none"></div>
+        <div class="view-switch" style="margin-bottom:12px">
+          <button id="tabAccessHistory" class="view-tab active" onclick="setHistoryTab('access')">🚪 접속 이력</button>
+          <button id="tabEditHistory" class="view-tab" onclick="setHistoryTab('changes')">✏️ 수정 이력</button>
+        </div>
+        <div class="stacked-controls" style="margin-bottom:12px">
+          <label for="historyTravelerFilter" style="font-size:12px;color:var(--muted)">여행자</label>
+          <select id="historyTravelerFilter" class="form-select" style="width:auto;min-width:125px" onchange="renderHistory()"><option value="all">전체</option><option value="t1">쩝</option><option value="t2">발</option><option value="t3">명</option></select>
+          <button class="btn btn-light" style="border:1px solid var(--border)" onclick="downloadActivityLog()">⬇️ 이력 내려받기</button>
+        </div>
+        <div id="historyEntries"></div>
+      </div>
+    </section>
+    <section id="reservationsView">
+    <input type="text" class="search-input" id="searchInput" placeholder="🔍 예약명, 장소, 예약번호, 메모 검색..." oninput="renderCards()">
+    <div class="category-pills">
+      <div class="pill active" onclick="setCategoryFilter('all', this)">전체 (<span id="count-all">0</span>)</div>
+      <div class="pill" onclick="setCategoryFilter('flight', this)">✈️ 항공권 (<span id="count-flight">0</span>)</div>
+      <div class="pill" onclick="setCategoryFilter('hotel', this)">🏨 숙소 (<span id="count-hotel">0</span>)</div>
+      <div class="pill" onclick="setCategoryFilter('food', this)">🍽️ 맛집 (<span id="count-food">0</span>)</div>
+      <div class="pill" onclick="setCategoryFilter('ticket', this)">🎟️ 티켓 (<span id="count-ticket">0</span>)</div>
+      <div class="pill" onclick="setCategoryFilter('memo', this)">📝 메모 (<span id="count-memo">0</span>)</div>
+    </div>
+
+    <div class="card-grid" id="cardGrid"></div>
+    </section>
+  </div>
+
+  <button class="fab-btn" onclick="openAddModal()" title="새 예약 추가">+</button>
+
+  <!-- Add/Edit Modal -->
+  <div class="modal-overlay" id="itemModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span id="modalTitle">예약 정보 추가</span>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editId">
+        <div class="form-row">
+          <div class="form-group">
+            <label>카테고리 *</label>
+            <select class="form-select" id="inputCategory">
+              <option value="flight">✈️ 항공권</option>
+              <option value="hotel">🏨 숙소</option>
+              <option value="food">🍽️ 식당·카페</option>
+              <option value="ticket">🎟️ 티켓·액티비티</option>
+              <option value="memo">📝 기타·메모</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>상태</label>
+            <select class="form-select" id="inputStatus">
+              <option value="confirmed">✅ 예약완료</option>
+              <option value="pending">⏳ 확인중</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>예약명 / 항목 타이틀 *</label>
+          <input type="text" class="form-input" id="inputTitle" placeholder="예: 인천 - 나리타 왕복 항공권">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>일시 / 날짜</label>
+            <input type="text" class="form-input" id="inputDatetime" placeholder="예: 2026-10-31 08:30">
+          </div>
+          <div class="form-group">
+            <label>위치 / 장소</label>
+            <input type="text" class="form-input" id="inputLocation" placeholder="예: 나리타공항 T1">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>예약번호</label>
+            <input type="text" class="form-input" id="inputBookingCode" placeholder="예: 7G8X9K">
+          </div>
+          <div class="form-group">
+            <label>비용</label>
+            <input type="text" class="form-input" id="inputPrice" placeholder="예: 320,000원">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>링크</label>
+          <input type="url" class="form-input" id="inputLink" placeholder="예: 구글 지도 or 예약 사이트">
+        </div>
+        <div class="form-group">
+          <label>메모</label>
+          <textarea class="form-textarea" id="inputMemo" rows="3" placeholder="예: 체크인 시 여권 필수, 스마트폰 QR 제시"></textarea>
+        </div>
+        <div class="form-group">
+          <label>📷 바코드 / 확인증 / 캡처 사진 첨부</label>
+          <div class="file-drop-area" onclick="document.getElementById('fileInput').click()">
+            🖼️ 클릭하여 이미지 첨부 (붙여넣기 Ctrl+V 지원)
+          </div>
+          <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+          <div class="image-preview-box" id="previewContainer" style="display:none;">
+            <img id="previewImg" src="" alt="미리보기">
+            <button class="remove-img-btn" onclick="removeImage()">✕ 사진 삭제</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" onclick="closeModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveItem()">저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cloud Modal -->
+  <div class="modal-overlay" id="cloudModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span>⚡ 실시간 동시 수정 설정</span>
+        <button class="close-btn" onclick="closeCloudModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="guide-box">
+          <strong>🔥 Firebase Realtime Database 연동됨</strong><br>
+          주소: <code>https://tokyo-last-trip-default-rtdb.firebaseio.com/</code><br>
+          여행 일정: <strong>2026.10.31 ~ 11.04 (5일간)</strong><br>
+          상단에서 쩝·발·명을 선택하면 접속이력과 수정이력이 기록됩니다.<br>
+          <strong>주의:</strong> 여행자 선택은 본인 인증이 아니며, 다른 사람의 이름을 선택할 수도 있습니다.<br>
+          이력 및 개인 메모는 기존 예약 데이터와 별도 경로에 저장됩니다.
+        </div>
+        <div class="form-group">
+          <label>공유 방 ID (Room Key)</label>
+          <input type="text" class="form-input" value="tokyo-trip-2026" readonly>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" onclick="closeCloudModal()">확인</button></div>
+    </div>
+  </div>
+
+  <!-- Share Modal -->
+  <div class="modal-overlay" id="shareModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span>📤 데이터 백업</span>
+        <button class="close-btn" onclick="closeShareModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="guide-box" style="background:#ebf8ff; border-color:#bee3f8; color:#2b6cb0;">
+          여행 일정: <strong>2026.10.31 ~ 11.04 (5일간)</strong><br>
+          기존 데이터 보존을 위해 복원은 새 예약만 추가하고 이미 등록된 예약을 덮어쓰거나 삭제하지 않습니다. 복원 전에 현재 데이터도 백업하세요.<br>
+          내려받은 파일에는 예약정보와 개인 메모가 포함됩니다. 이력은 ‘이용 이력’에서 별도로 내려받을 수 있습니다.
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="exportData()">💾 백업 다운로드</button>
+          <button class="btn btn-light" style="flex:1; border:1px solid #cbd5e0;" onclick="document.getElementById('importFile').click()">📥 백업 복원</button>
+          <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" onclick="closeShareModal()">닫기</button></div>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox()">
+    <button class="lightbox-close">&times;</button>
+    <img class="lightbox-img" id="lightboxImg" src="" alt="확대" onclick="event.stopPropagation()">
+  </div>
+
+  <script>
+    const BUILTIN_FIREBASE_URL = "https://tokyo-last-trip-default-rtdb.firebaseio.com/";
+    const TRIP_START_DATE = "2026-10-31";
+    const TRIP_END_DATE = "2026-11-04";
+
+    const DEFAULT_ITEMS = [
+      {
+        id: "sample-flight-1", category: "flight", status: "confirmed",
+        title: "출국편: 인천(ICN) ➔ 나리타(NRT)", datetime: "2026-10-31(토) 08:30 출발 (10:55 도착)",
+        location: "인천국제공항 T1 / 제주항공 7C1102", bookingCode: "7K9M2P", price: "왕복 320,000원",
+        link: "https://www.incheon-airport.kr", memo: "• 출발 3시간 전 공항 미팅 (05:30)\n• 위탁수하물 15kg 포함\n• Visit Japan Web 입국심사 QR 캡처 필수!",
+        imageData: "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='260'%3E%3Crect width='600' height='260' fill='%231d3557'/%3E%3Ctext x='30' y='45' fill='%23ffccd5' font-size='18' font-family='sans-serif' font-weight='bold'%3EBOARDING PASS (E-TICKET)%3C/text%3E%3Crect x='30' y='65' width='540' height='160' rx='8' fill='%23fff'/%3E%3Ctext x='50' y='105' fill='%23333' font-size='15' font-family='sans-serif'%3EFLIGHT: %3Cstrong%3E7C1102%3C/strong%3E (ICN %E2%9E%94 NRT)%3C/text%3E%3Ctext x='50' y='135' fill='%23666' font-size='13' font-family='sans-serif'%3EDATE: 2026-10-31 | DEPARTURE: 08:30 (T1)%3C/text%3E%3Ctext x='50' y='165' fill='%23666' font-size='13' font-family='sans-serif'%3EBOOKING REF: %3Cstrong%3E7K9M2P%3C/strong%3E%3C/text%3E%3Crect x='430' y='85' width='115' height='115' fill='%23edf2f7' stroke='%23cbd5e0'/%3E%3Ctext x='450' y='145' fill='%23a0aec0' font-size='11' font-family='sans-serif'%3E[QR CODE]%3C/text%3E%3C/svg%3E"
+      },
+      {
+        id: "sample-hotel-1", category: "hotel", status: "confirmed",
+        title: "신주쿠 그란벨 호텔 (Shinjuku Granbell)", datetime: "2026-10-31(토) 체크인 ~ 11-04(수) 체크아웃 (4박 5일)",
+        location: "도쿄도 신주쿠구 가부키초 2-9-2", bookingCode: "AGD-8842109", price: "4박 총 ¥92,000",
+        link: "https://maps.google.com/?q=Shinjuku+Granbell+Hotel", memo: "• 히가시신주쿠역 A1 출구 도보 4분\n• 조식 미포함 / 프런트 짐 보관 무료 가능\n• 대표자 이름으로 현장 여권 확인",
+        imageData: "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='260'%3E%3Crect width='600' height='260' fill='%237c3aed'/%3E%3Ctext x='30' y='45' fill='%23fff' font-size='18' font-family='sans-serif' font-weight='bold'%3EHOTEL VOUCHER%3C/text%3E%3Crect x='30' y='65' width='540' height='160' rx='8' fill='%23fff'/%3E%3Ctext x='50' y='105' fill='%23333' font-size='15' font-family='sans-serif'%3EPROPERTY: %3Cstrong%3EShinjuku Granbell Hotel%3C/strong%3E%3C/text%3E%3Ctext x='50' y='135' fill='%23666' font-size='13' font-family='sans-serif'%3ESTAY: 4 NIGHTS (2026.10.31 - 11.04)%3C/text%3E%3Ctext x='50' y='165' fill='%23666' font-size='13' font-family='sans-serif'%3EVOUCHER: %3Cstrong%3EAGD-8842109%3C/strong%3E%3C/text%3E%3C/svg%3E"
+      },
+      {
+        id: "sample-ticket-1", category: "ticket", status: "confirmed",
+        title: "시부야 스카이 (SHIBUYA SKY) 일몰 입장권", datetime: "2026-10-31(토) 17:00 입장",
+        location: "시부야 스크램블 스퀘어 14층", bookingCode: "KLOOK-TK-9921", price: "1인 22,000원",
+        link: "https://www.shibuya-scramble-square.com/sky/", memo: "• 일몰 예정 시간: 16:50 경\n• 옥상 전망대 삼각대, 모자, 배낭 반입 금지 (100엔 코인라커 필수)",
+        imageData: "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='260'%3E%3Crect width='600' height='260' fill='%23ea580c'/%3E%3Ctext x='30' y='45' fill='%23fff' font-size='18' font-family='sans-serif' font-weight='bold'%3ESHIBUYA SKY TICKET%3C/text%3E%3Crect x='30' y='65' width='540' height='160' rx='8' fill='%23fff'/%3E%3Ctext x='50' y='110' fill='%23333' font-size='15' font-family='sans-serif'%3ETIME: %3Cstrong%3E2026-10-31 17:00%3C/strong%3E%3C/text%3E%3Ctext x='50' y='145' fill='%23666' font-size='13' font-family='sans-serif'%3EVOUCHER: KLOOK-TK-9921%3C/text%3E%3C/svg%3E"
+      }
+    ];
+
+    // DB 경로·필드(items 배열)를 이전 버전과 동일하게 유지합니다.
+    // DEFAULT_ITEMS는 기존 코드 호환용으로 남겨 두되 절대 Firebase에 자동 저장하지 않습니다.
+    let items = [];
+    let currentFilter = 'all', currentImageData = '';
+    let tripStartDate = TRIP_START_DATE, tripEndDate = TRIP_END_DATE;
+    let firebaseDb = null, currentRoomKey = 'tokyo-trip-2026';
+    let cloudLoaded = false, cloudConnected = false, selectedDay = '2026-10-31';
+    let currentView = 'reservations';
+    const TRAVELERS = { t1: '쩝', t2: '발', t3: '명' };
+    const MEMO_ROOT = 'tripPersonalNotesV1/';
+    const HISTORY_ROOT = 'tripActivityV1/';
+    let currentTraveler = '';
+    let personalNotes = {}, accessLogs = {}, editLogs = {};
+    let notesLoaded = false, accessHistoryLoaded = false, editsHistoryLoaded = false;
+    let historyTab = 'access', accessLoggedForPage = '';
+    let deviceId = '';
+
+    function travelerName(id) { return TRAVELERS[id] || '선택 안 함'; }
+    function formatKst(timestamp) {
+      if (typeof timestamp !== 'number' || !Number.isFinite(timestamp)) return '시각 확인 중';
+      return new Intl.DateTimeFormat('ko-KR', { timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).format(new Date(timestamp));
+    }
+    function requireTraveler() {
+      if (!TRAVELERS[currentTraveler]) { alert('먼저 화면 상단의 ‘내 이름’에서 쩝·발·명 중 본인을 선택해 주세요.'); return false; }
+      return true;
+    }
+    function chooseTraveler(value) {
+      if (!TRAVELERS[value]) { currentTraveler = ''; return; }
+      currentTraveler = value;
+      try { localStorage.setItem('tokyo_trip_traveler_v1', value); } catch (e) {}
+      renderPersonalNotes();
+      if (firebaseDb && cloudConnected && cloudLoaded) logAccessOnce();
+    }
+    async function appendActivity(type, detail, actor=currentTraveler) {
+      if (!firebaseDb || !cloudConnected || !TRAVELERS[actor]) return false;
+      try {
+        const path = HISTORY_ROOT + currentRoomKey + '/' + type;
+        await firebaseDb.ref(path).push().set({ ...detail, actor, deviceId, at:firebase.database.ServerValue.TIMESTAMP });
+        return true;
+      } catch (e) {
+        showAddonNotice('historyStorageNotice', '⚠️ Firebase 권한 때문에 접속·수정 이력을 기록하지 못했습니다. Firebase Database Rules를 확인하세요.');
+        console.error('이력 기록 실패:', e);
+        return false;
+      }
+    }
+    async function logAccessOnce() {
+      if (!TRAVELERS[currentTraveler] || !cloudLoaded || !cloudConnected || accessLoggedForPage === currentTraveler) return;
+      const actor = currentTraveler;
+      accessLoggedForPage = actor;
+      const ok = await appendActivity('access', { action:'접속', info:'웹사이트 접속 및 여행자 선택' }, actor);
+      if (!ok && accessLoggedForPage === actor) accessLoggedForPage = '';
+    }
+    function showAddonNotice(id, message) {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = message; el.style.display = 'block'; }
+    }
+    function initializeExtras() {
+      try { currentTraveler = localStorage.getItem('tokyo_trip_traveler_v1') || ''; } catch(e) {}
+      if (!TRAVELERS[currentTraveler]) currentTraveler = '';
+      document.getElementById('travelerSelector').value = currentTraveler;
+      try {
+        deviceId = localStorage.getItem('tokyo_trip_device_v1') || '';
+        if (!deviceId) { deviceId = 'browser-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,10); localStorage.setItem('tokyo_trip_device_v1', deviceId); }
+      } catch(e) { deviceId = 'browser-temporary'; }
+      renderPersonalNotes();
+      renderHistory();
+    }
+    function listenExtraData() {
+      if (!firebaseDb) return;
+      firebaseDb.ref(MEMO_ROOT + currentRoomKey).on('value', snap => {
+        personalNotes = snap.val() || {};
+        notesLoaded = true;
+        renderPersonalNotes();
+      }, err => { notesLoaded = false; showAddonNotice('notesStorageNotice','⚠️ 개인 메모를 읽을 수 없습니다. Firebase Database Rules에서 tripPersonalNotesV1 경로를 확인하세요.'); console.error(err); });
+      firebaseDb.ref(HISTORY_ROOT + currentRoomKey + '/access').limitToLast(200).on('value', snap => {
+        accessLogs = snap.val() || {};
+        accessHistoryLoaded = true;
+        renderHistory();
+      }, err => { accessHistoryLoaded = false; showAddonNotice('historyStorageNotice','⚠️ 접속 이력을 읽을 수 없습니다. Firebase Database Rules를 확인하세요.'); console.error(err); });
+      firebaseDb.ref(HISTORY_ROOT + currentRoomKey + '/changes').limitToLast(300).on('value', snap => {
+        editLogs = snap.val() || {};
+        editsHistoryLoaded = true;
+        renderHistory();
+      }, err => { editsHistoryLoaded = false; showAddonNotice('historyStorageNotice','⚠️ 수정 이력을 읽을 수 없습니다. Firebase Database Rules를 확인하세요.'); console.error(err); });
+    }
+    function makeFieldChanges(before, after) {
+      const fields = { category:'카테고리',status:'상태',title:'예약명',datetime:'일시',location:'장소',bookingCode:'예약번호',price:'비용',link:'링크',memo:'기존 메모',imageData:'첨부 이미지' };
+      return Object.keys(fields).filter(key => (before?.[key] || '') !== (after?.[key] || '')).map(key => {
+        const hidden = key === 'bookingCode' || key === 'imageData';
+        return { field:fields[key], before:hidden ? '[값 비공개]' : String(before?.[key] || '').slice(0,300), after:hidden ? '[값 비공개]' : String(after?.[key] || '').slice(0,300) };
+      });
+    }
+    function renderPersonalNotes() {
+      const el = document.getElementById('personalNotesColumns'); if (!el) return;
+      const entries = Object.entries(personalNotes).filter(([,n]) => n && TRAVELERS[n.author]);
+      entries.sort((a,b) => (Number(b[1].updatedAt)||Number(b[1].createdAt)||0) - (Number(a[1].updatedAt)||Number(a[1].createdAt)||0));
+      el.innerHTML = Object.entries(TRAVELERS).map(([slot,name]) => {
+        const owned = entries.filter(([,n]) => n.author === slot);
+        const nodes = owned.map(([id,n]) => {
+          const safeId = encodeURIComponent(id).replace(/'/g,'%27');
+          const related = n.bookingId && items.find(it => it.id === n.bookingId);
+          return `<article class="memo-entry">
+            ${related ? `<small>🔗 ${escapeHtml(related.title)}</small>` : ''}
+            <p>${escapeHtml(n.text || '')}</p>
+            <small>${formatKst(n.updatedAt || n.createdAt)}${n.updatedAt ? ' · 수정됨' : ''}</small>
+            ${currentTraveler === slot ? `<div class="memo-actions"><button class="card-action-btn" onclick="editPersonalNote(decodeURIComponent('${safeId}'))">✏️ 수정</button><button class="card-action-btn delete" onclick="deletePersonalNote(decodeURIComponent('${safeId}'))">🗑️ 삭제</button></div>` : ''}
+          </article>`;
+        }).join('');
+        return `<div class="notes-column"><h3>👤 ${name} <span class="person-badge">${owned.length}개</span></h3>${nodes || '<p class="section-note">작성된 메모가 없습니다.</p>'}</div>`;
+      }).join('');
+      const bookingSelect = document.getElementById('memoBookingLink');
+      if (bookingSelect) {
+        const old = bookingSelect.value;
+        bookingSelect.innerHTML = '<option value="">연결하지 않음</option>' + items.filter(i => i && i.id).map(it => `<option value="${escapeHtml(String(it.id))}">${escapeHtml(it.title || '예약')}</option>`).join('');
+        if (items.some(it => it.id === old)) bookingSelect.value = old;
+      }
+    }
+    async function addPersonalNote() {
+      if (!requireCloudWrite() || !requireTraveler() || !notesLoaded) { if (!notesLoaded) alert('개인 메모를 불러온 후 저장할 수 있습니다.'); return; }
+      const input = document.getElementById('personalMemoInput');
+      const body = input.value.trim(); if (!body) return alert('메모 내용을 입력해 주세요.');
+      const bookingId = document.getElementById('memoBookingLink').value;
+      const actor = currentTraveler;
+      try {
+        const noteRef = firebaseDb.ref(MEMO_ROOT + currentRoomKey).push();
+        await noteRef.set({ author:actor, text:body, bookingId, createdAt:firebase.database.ServerValue.TIMESTAMP });
+        input.value = ''; document.getElementById('memoBookingLink').value = '';
+        if (!await appendActivity('changes', {action:'메모 작성', targetId:noteRef.key, title:'개인 메모', changes:[{field:'메모',before:'',after:body.slice(0,300)}]})) alert('메모는 저장됐지만 수정 이력 기록에 실패했습니다.');
+      } catch(e) { alert('메모 저장 실패: ' + e.message); }
+    }
+    async function editPersonalNote(id) {
+      if (!requireCloudWrite() || !requireTraveler()) return;
+      const existing = personalNotes[id];
+      if (!existing || existing.author !== currentTraveler) return alert('현재 선택한 여행자의 메모만 수정할 수 있습니다.');
+      const changed = prompt('수정할 메모 내용', existing.text || '');
+      if (changed === null) return;
+      const next = changed.trim(); if (!next || next.length > 4000) return alert('메모는 1~4000자로 작성해 주세요.');
+      let beforeText = '';
+      try {
+        const result = await firebaseDb.ref(MEMO_ROOT + currentRoomKey + '/' + id).transaction(current => {
+          if (!current || current.author !== currentTraveler) return;
+          beforeText = current.text || '';
+          return { ...current, text:next, updatedAt:firebase.database.ServerValue.TIMESTAMP };
+        }, undefined, false);
+        if (!result.committed) return alert('메모를 수정할 수 없습니다. 다시 확인해 주세요.');
+        if (!await appendActivity('changes', {action:'메모 수정', targetId:id, title:'개인 메모', changes:[{field:'메모',before:beforeText.slice(0,300),after:next.slice(0,300)}]})) alert('메모는 수정됐지만 수정 이력 기록에 실패했습니다.');
+      } catch(e) { alert('메모 수정 실패: ' + e.message); }
+    }
+    async function deletePersonalNote(id) {
+      if (!requireCloudWrite() || !requireTraveler()) return;
+      const existing = personalNotes[id];
+      if (!existing || existing.author !== currentTraveler) return alert('현재 선택한 여행자의 메모만 삭제할 수 있습니다.');
+      if (!confirm('이 메모를 삭제하시겠습니까?')) return;
+      try {
+        const result = await firebaseDb.ref(MEMO_ROOT + currentRoomKey + '/' + id).transaction(current => {
+          if (!current || current.author !== currentTraveler) return;
+          return null;
+        }, undefined, false);
+        if (!result.committed) return alert('메모가 이미 변경되었거나 삭제되었습니다.');
+        if (!await appendActivity('changes', {action:'메모 삭제', targetId:id, title:'개인 메모', changes:[{field:'메모',before:String(existing.text||'').slice(0,300),after:'[삭제]'}]})) alert('메모는 삭제됐지만 수정 이력 기록에 실패했습니다.');
+      } catch(e) { alert('메모 삭제 실패: ' + e.message); }
+    }
+    function setHistoryTab(tab) { historyTab = tab; renderHistory(); }
+    function renderHistory() {
+      const el = document.getElementById('historyEntries'); if (!el) return;
+      const isAccess = historyTab === 'access';
+      document.getElementById('tabAccessHistory').classList.toggle('active',isAccess);
+      document.getElementById('tabEditHistory').classList.toggle('active',!isAccess);
+      if (!(isAccess ? accessHistoryLoaded : editsHistoryLoaded)) { el.innerHTML='<p class="section-note">Firebase 이력을 불러오는 중입니다.</p>'; return; }
+      const filter = document.getElementById('historyTravelerFilter').value;
+      const entries = Object.entries(isAccess ? accessLogs : editLogs)
+        .filter(([,r]) => r && (filter === 'all' || r.actor === filter))
+        .sort((a,b) => (Number(b[1].at)||0) - (Number(a[1].at)||0));
+      if (!entries.length) { el.innerHTML='<p class="section-note">아직 기록이 없습니다. 새 버전 적용 이후의 활동부터 저장됩니다.</p>'; return; }
+      el.innerHTML = entries.map(([,r]) => {
+        const detail = !isAccess && Array.isArray(r.changes) ? `<div class="log-changes">${r.changes.map(d=>`${escapeHtml(d.field||'항목')}: ${escapeHtml(d.before||'(비어 있음)')} → ${escapeHtml(d.after||'(비어 있음)')}`).join('\n')}</div>` : '';
+        return `<article class="log-entry"><div><span class="person-badge">${escapeHtml(travelerName(r.actor))}</span> <strong>${escapeHtml(r.action||'작업')}</strong>${r.title ? ' · '+escapeHtml(r.title):''}</div><small>🕘 ${formatKst(r.at)}</small>${detail}</article>`;
+      }).join('');
+    }
+    function downloadActivityLog() {
+      const data = { exportedAt:new Date().toISOString(), room:currentRoomKey, accessLogs, editLogs };
+      downloadJson(data, 'tokyo_trip_history.json');
+    }
+    function downloadJson(data, name) {
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+      const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+
+    function setSyncStatus(message, type='loading') {
+      document.getElementById('syncStatusText').textContent = message;
+      const dot = document.getElementById('syncDot');
+      dot.className = 'sync-dot' + (type === 'online' ? '' : ' ' + type);
+      document.getElementById('cloudNotice').textContent = message === '실시간 연결됨'
+        ? '예약정보가 실시간으로 동기화됩니다.'
+        : message + ' · 연결된 상태에서만 수정할 수 있습니다.';
+    }
+
+    function initFirebaseSync() {
+      try {
+        if (typeof firebase === 'undefined') throw new Error('Firebase 라이브러리를 불러오지 못했습니다.');
+        if (!firebase.apps.length) firebase.initializeApp({ databaseURL: BUILTIN_FIREBASE_URL });
+        firebaseDb = firebase.database();
+        firebaseDb.ref('.info/connected').on('value', snapshot => {
+          cloudConnected = snapshot.val() === true;
+          setSyncStatus(cloudConnected ? (cloudLoaded ? '실시간 연결됨' : '데이터 불러오는 중') : '연결 끊김 · 읽기 전용', cloudConnected && cloudLoaded ? 'online' : 'offline');
+          if (cloudConnected && cloudLoaded) logAccessOnce();
+        });
+        listenExtraData();
+        firebaseDb.ref('trips/' + currentRoomKey).on('value', snapshot => {
+          const data = snapshot.val();
+          if (data && data.items !== undefined && data.items !== null && !Array.isArray(data.items)) {
+            cloudLoaded = false;
+            setSyncStatus('데이터 형식 확인 필요 · 수정 차단', 'offline');
+            return;
+          }
+          // 없으면 빈 목록만 보여주고 초기화/삭제/샘플 데이터 쓰기를 하지 않습니다.
+          items = data && Array.isArray(data.items) ? data.items.filter(Boolean) : [];
+          tripStartDate = data && data.tripStartDate ? data.tripStartDate : TRIP_START_DATE;
+          tripEndDate = data && data.tripEndDate ? data.tripEndDate : TRIP_END_DATE;
+          cloudLoaded = true;
+          setSyncStatus(cloudConnected ? '실시간 연결됨' : '오프라인 · 읽기 전용', cloudConnected ? 'online' : 'offline');
+          updateDdayBadge();
+          renderCards();
+          renderSchedule();
+          renderPersonalNotes();
+          logAccessOnce();
+        }, err => {
+          cloudLoaded = false;
+          setSyncStatus('데이터 접근 실패 · 수정 차단', 'offline');
+          console.error('Firebase 데이터 읽기 오류:', err);
+        });
+      } catch (err) {
+        cloudLoaded = false;
+        setSyncStatus('Firebase 연결 실패 · 수정 차단', 'offline');
+        console.error('Firebase 초기화 오류:', err);
+      }
+    }
+
+    function requireCloudWrite() {
+      if (!firebaseDb || !cloudLoaded || !cloudConnected) {
+        alert('Firebase 연결과 기존 예약 데이터 로딩이 완료된 후 수정할 수 있습니다. 기존 데이터 보호를 위해 오프라인 수정은 차단했습니다.');
+        return false;
+      }
+      return true;
+    }
+
+    // 배열 단위 트랜잭션으로 기존 DB 구조를 유지하면서 동시 편집 충돌을 줄입니다.
+    async function changeItemsAtomically(change) {
+      if (!requireCloudWrite()) return false;
+      try {
+        const result = await firebaseDb.ref('trips/' + currentRoomKey + '/items').transaction(current => {
+          if (current !== null && !Array.isArray(current)) return; // 예기치 않은 데이터 구조면 중지
+          return change((current || []).filter(Boolean));
+        }, undefined, false);
+        if (!result.committed) throw new Error('다른 수정 내용과 충돌했거나 원본 예약을 찾을 수 없습니다.');
+        return true;
+      } catch (error) {
+        console.error('예약 저장 오류:', error);
+        alert('저장되지 않았습니다. 기존 클라우드 데이터는 그대로 유지됩니다.\n' + error.message);
+        return false;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      updateDdayBadge();
+      renderCards();
+      renderSchedule();
+      calcExchange();
+      initializeExtras();
+      initFirebaseSync();
+      window.addEventListener('paste', handlePaste);
+    });
+
+    function switchView(view) {
+      currentView = view;
+      document.getElementById('reservationsView').style.display = view === 'reservations' ? '' : 'none';
+      document.getElementById('scheduleView').style.display = view === 'schedule' ? '' : 'none';
+      document.getElementById('notesView').style.display = view === 'notes' ? '' : 'none';
+      document.getElementById('historyView').style.display = view === 'history' ? '' : 'none';
+      document.getElementById('tabReservations').classList.toggle('active', view === 'reservations');
+      document.getElementById('tabSchedule').classList.toggle('active', view === 'schedule');
+      document.getElementById('tabNotes').classList.toggle('active', view === 'notes');
+      document.getElementById('tabHistory').classList.toggle('active', view === 'history');
+      if (view === 'schedule') renderSchedule();
+      if (view === 'notes') renderPersonalNotes();
+      if (view === 'history') renderHistory();
+      document.querySelector('.fab-btn').style.display = view === 'reservations' ? '' : 'none';
+    }
+
+    function extractFirstDate(value) {
+      const m = String(value || '').match(/(20\d{2})[-./](\d{1,2})[-./](\d{1,2})/);
+      if (!m) return '';
+      const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+      const dt = new Date(y, mo - 1, d);
+      if (dt.getFullYear() !== y || dt.getMonth() !== mo-1 || dt.getDate() !== d) return '';
+      return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    }
+
+    function renderSchedule() {
+      const days = [ ['2026-10-31','10/31 토'], ['2026-11-01','11/1 일'], ['2026-11-02','11/2 월'], ['2026-11-03','11/3 화'], ['2026-11-04','11/4 수'] ];
+      document.getElementById('dayTabs').innerHTML = days.map(([day,label]) =>
+        `<button class="day-tab ${selectedDay === day ? 'active' : ''}" onclick="selectedDay='${day}';renderSchedule()">${label}</button>`
+      ).join('');
+      const dayItems = items.filter(it => extractFirstDate(it.datetime) === selectedDay)
+        .sort((a,b) => {
+          const time = it => (String(it.datetime || '').match(/\b([01]?\d|2[0-3]):[0-5]\d/) || ['99:99'])[0].padStart(5, '0');
+          return time(a).localeCompare(time(b));
+        });
+      const container = document.getElementById('daySchedule');
+      if (!cloudLoaded) { container.innerHTML = '<div class="schedule-entry">☁️ 클라우드 예약정보를 불러오는 중입니다.</div>'; return; }
+      if (!dayItems.length) { container.innerHTML = '<div class="schedule-entry">이 날짜로 확인된 예약이 없습니다. 다른 형식의 날짜는 ‘예약 목록’에서 확인하세요.</div>'; return; }
+      container.innerHTML = dayItems.map(it => {
+        const safeId = encodeURIComponent(String(it.id)).replace(/'/g, '%27');
+        return `<div class="schedule-entry">
+          <small>${escapeHtml(it.datetime || '')} · ${it.status === 'confirmed' ? '예약완료' : '확인중'}</small>
+          <strong>${escapeHtml(it.title || '')}</strong>
+          ${it.location ? `<div style="font-size:13px">📍 ${escapeHtml(it.location)}</div>` : ''}
+          <div style="margin-top:10px"><button class="card-action-btn" onclick="editItem(decodeURIComponent('${safeId}'))">✏️ 예약 상세·수정</button></div>
+        </div>`;
+      }).join('');
+    }
+
+    function updateDdayBadge() {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const start = new Date(tripStartDate); start.setHours(0,0,0,0);
+      const end = new Date(tripEndDate); end.setHours(23,59,59,999);
+      const diffStart = Math.ceil((start - today) / (1000 * 60 * 60 * 24));
+      const badge = document.getElementById('ddayBadge');
+
+      if (diffStart > 0) {
+        badge.innerHTML = `🗓️ 도쿄 D-${diffStart} <strong>(2026.10.31 ~ 11.04 5일간)</strong>`;
+      } else if (today >= start && today <= end) {
+        badge.innerHTML = `🎉 <strong>도쿄 여행 진행 중! (5일간)</strong>`;
+      } else {
+        badge.innerHTML = `🗼 도쿄 여행 완료 (2026.10.31 ~ 11.04)`;
+      }
+    }
+
+    function calcExchange() {
+      const jpy = parseFloat(document.getElementById('jpyInput').value) || 0;
+      document.getElementById('krwResult').innerText = Math.round(jpy * 9.2).toLocaleString() + '원';
+    }
+
+    function setCategoryFilter(cat, el) {
+      currentFilter = cat;
+      document.querySelectorAll('.category-pills .pill').forEach(p => p.classList.remove('active'));
+      if (el) el.classList.add('active');
+      renderCards();
+    }
+
+    function renderCards() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const grid = document.getElementById('cardGrid');
+      const counts = { all: items.length, flight: 0, hotel: 0, food: 0, ticket: 0, memo: 0 };
+      items.forEach(it => { if (counts[it.category] !== undefined) counts[it.category]++; });
+      document.getElementById('count-all').innerText = counts.all;
+      document.getElementById('count-flight').innerText = counts.flight;
+      document.getElementById('count-hotel').innerText = counts.hotel;
+      document.getElementById('count-food').innerText = counts.food;
+      document.getElementById('count-ticket').innerText = counts.ticket;
+      document.getElementById('count-memo').innerText = counts.memo;
+
+      const filtered = items.filter(it => {
+        const matchCat = (currentFilter === 'all' || it.category === currentFilter);
+        const matchQ = !query || [it.title, it.location, it.bookingCode, it.memo].some(t => t && t.toLowerCase().includes(query));
+        return matchCat && matchQ;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = cloudLoaded ? '<div class="empty-state">📋 해당하는 예약 정보가 없습니다.</div>' : '<div class="empty-state">☁️ Firebase 예약정보를 확인하는 중입니다. 연결 상태를 확인하세요.</div>';
+        return;
+      }
+
+      const catLabels = { flight: '✈️ 항공권', hotel: '🏨 숙소', food: '🍽️ 맛집', ticket: '🎟️ 티켓', memo: '📝 메모' };
+
+      grid.innerHTML = filtered.map(it => {
+        const safeId = encodeURIComponent(String(it.id)).replace(/'/g, '%27');
+      const safeImage = String(it.imageData || '').startsWith('data:image/') ? escapeHtml(it.imageData) : '';
+      const imgHtml = safeImage ? `
+          <div class="card-image-wrap" onclick="openLightbox(decodeURIComponent('${safeId}'))">
+            <img src="${safeImage}" alt="${escapeHtml(it.title)}">
+            <div class="image-zoom-badge">🔍 사진 확대</div>
+          </div>
+        ` : `
+          <div class="no-image-placeholder">
+            <span>📷 첨부된 사진 없음</span>
+            <button class="card-action-btn" onclick="quickAttachImage(decodeURIComponent('${safeId}'))" style="color:#2563eb; text-decoration:underline;">+ 사진 첨부</button>
+          </div>
+        `;
+        const verifiedLink = safeExternalLink(it.link);
+      const linkBtn = verifiedLink ? `<a href="${escapeHtml(verifiedLink)}" target="_blank" rel="noopener" class="card-action-btn" style="color:#2563eb; text-decoration:none;">🔗 링크</a>` : '<div></div>';
+
+        return `
+          <div class="card">
+            <div class="card-content">
+              <div class="card-header-line">
+                <span class="category-badge badge-${it.category}">${catLabels[it.category] || it.category}</span>
+                <span class="status-badge">${it.status === 'confirmed' ? '예약완료' : '저장됨'}</span>
+              </div>
+              <div class="card-title">${escapeHtml(it.title)}</div>
+              ${it.location ? `<div class="card-subtitle">📍 ${escapeHtml(it.location)}</div>` : ''}
+              <div class="card-meta-list">
+                ${it.datetime ? `<div class="meta-item"><span class="meta-label">일시</span><span class="meta-val">${escapeHtml(it.datetime)}</span></div>` : ''}
+                ${it.bookingCode ? `<div class="meta-item"><span class="meta-label">예약번호</span><span class="meta-val meta-code">${escapeHtml(it.bookingCode)}</span></div>` : ''}
+                ${it.price ? `<div class="meta-item"><span class="meta-label">비용</span><span class="meta-val" style="color:#e63946;">${escapeHtml(it.price)}</span></div>` : ''}
+              </div>
+              ${it.memo ? `<div class="card-memo">${escapeHtml(it.memo)}</div>` : ''}
+              <!-- 캡처 사진이 정보 아래에 배치됨 -->
+              ${imgHtml}
+              <div class="card-footer">
+                ${linkBtn}
+                <div>
+                  <button class="card-action-btn" onclick="openNotesForBooking(decodeURIComponent('${safeId}'))">💬 메모</button>
+                  <button class="card-action-btn" onclick="editItem(decodeURIComponent('${safeId}'))">✏️ 수정</button>
+                  <button class="card-action-btn delete" onclick="deleteItem(decodeURIComponent('${safeId}'))">🗑️ 삭제</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openNotesForBooking(id) {
+      switchView('notes');
+      const sel = document.getElementById('memoBookingLink');
+      sel.value = id;
+      document.getElementById('personalMemoInput').focus();
+    }
+
+    function openAddModal() {
+      document.getElementById('editId').value = '';
+      document.getElementById('modalTitle').innerText = '새 예약 정보 추가';
+      document.getElementById('inputCategory').value = 'flight';
+      document.getElementById('inputStatus').value = 'confirmed';
+      document.getElementById('inputTitle').value = '';
+      document.getElementById('inputDatetime').value = '';
+      document.getElementById('inputLocation').value = '';
+      document.getElementById('inputBookingCode').value = '';
+      document.getElementById('inputPrice').value = '';
+      document.getElementById('inputLink').value = '';
+      document.getElementById('inputMemo').value = '';
+      removeImage();
+      document.getElementById('itemModal').classList.add('active');
+    }
+
+    function editItem(id) {
+      const it = items.find(i => i.id === id);
+      if (!it) return;
+      document.getElementById('editId').value = it.id;
+      document.getElementById('modalTitle').innerText = '예약 정보 수정';
+      document.getElementById('inputCategory').value = it.category || 'flight';
+      document.getElementById('inputStatus').value = it.status || 'confirmed';
+      document.getElementById('inputTitle').value = it.title || '';
+      document.getElementById('inputDatetime').value = it.datetime || '';
+      document.getElementById('inputLocation').value = it.location || '';
+      document.getElementById('inputBookingCode').value = it.bookingCode || '';
+      document.getElementById('inputPrice').value = it.price || '';
+      document.getElementById('inputLink').value = it.link || '';
+      document.getElementById('inputMemo').value = it.memo || '';
+      if (it.imageData) {
+        currentImageData = it.imageData;
+        document.getElementById('previewImg').src = it.imageData;
+        document.getElementById('previewContainer').style.display = 'flex';
+      } else { removeImage(); }
+      document.getElementById('itemModal').classList.add('active');
+    }
+
+    function closeModal() { document.getElementById('itemModal').classList.remove('active'); }
+    function openCloudModal() { document.getElementById('cloudModal').classList.add('active'); }
+    function closeCloudModal() { document.getElementById('cloudModal').classList.remove('active'); }
+    function openShareModal() { document.getElementById('shareModal').classList.add('active'); }
+    function closeShareModal() { document.getElementById('shareModal').classList.remove('active'); }
+    function quickAttachImage(id) { editItem(id); document.getElementById('fileInput').click(); }
+
+    function handleImageUpload(e) {
+      const file = e.target.files[0];
+      if (file) processImageFile(file);
+    }
+    function processImageFile(file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        compressImage(event.target.result, 1200, 0.8, (compressed) => {
+          currentImageData = compressed;
+          document.getElementById('previewImg').src = compressed;
+          document.getElementById('previewContainer').style.display = 'flex';
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+    function handlePaste(e) {
+      if (!document.getElementById('itemModal').classList.contains('active')) return;
+      const cItems = (e.clipboardData || e.originalEvent.clipboardData).items;
+      for (const it of cItems) {
+        if (it.type.indexOf('image') !== -1) {
+          processImageFile(it.getAsFile());
+          e.preventDefault(); break;
+        }
+      }
+    }
+    function compressImage(base64Str, maxWidth, quality, cb) {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = Math.round((h * maxWidth) / w); w = maxWidth; }
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        cb(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => cb(base64Str);
+    }
+    function removeImage() {
+      currentImageData = '';
+      document.getElementById('previewImg').src = '';
+      document.getElementById('previewContainer').style.display = 'none';
+      document.getElementById('fileInput').value = '';
+    }
+
+    async function saveItem() {
+      if (!requireCloudWrite() || !requireTraveler()) return;
+      const actor = currentTraveler;
+      const title = document.getElementById('inputTitle').value.trim();
+      if (!title) return alert('예약명은 필수입니다.');
+      const editId = document.getElementById('editId').value;
+      const item = {
+        id: editId || 'tokyo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        category: document.getElementById('inputCategory').value,
+        status: document.getElementById('inputStatus').value,
+        title,
+        datetime: document.getElementById('inputDatetime').value.trim(),
+        location: document.getElementById('inputLocation').value.trim(),
+        bookingCode: document.getElementById('inputBookingCode').value.trim(),
+        price: document.getElementById('inputPrice').value.trim(),
+        link: document.getElementById('inputLink').value.trim(),
+        memo: document.getElementById('inputMemo').value.trim(),
+        imageData: currentImageData || ''
+      };
+      if (item.link && !safeExternalLink(item.link)) return alert('링크는 http:// 또는 https:// 주소만 등록할 수 있습니다.');
+      let previousItem = null;
+      const success = await changeItemsAtomically(existing => {
+        const index = existing.findIndex(it => it.id === item.id);
+        previousItem = index >= 0 ? {...existing[index]} : null;
+        if (editId && index < 0) return; // 다른 사람이 이미 삭제한 예약을 복원하지 않음
+        if (index >= 0) existing[index] = { ...existing[index], ...item };
+        else existing.unshift(item);
+        return existing;
+      });
+      if (success) {
+        closeModal();
+        const changes = makeFieldChanges(previousItem, item);
+        const logged = await appendActivity('changes', {action:editId ? '예약 수정' : '예약 추가', targetId:item.id, title:item.title, changes}, actor);
+        if (!logged) alert('예약 저장은 완료됐지만 수정 이력 기록에 실패했습니다. Firebase 권한을 확인하세요.');
+      }
+    }
+
+    async function deleteItem(id) {
+      if (!requireCloudWrite() || !requireTraveler()) return;
+      if (!confirm('이 예약 항목을 삭제하시겠습니까? 삭제하면 친구들 화면에서도 사라집니다. 먼저 백업을 권장합니다.')) return;
+      const actor = currentTraveler;
+      let deletedItem = null;
+      const success = await changeItemsAtomically(existing => {
+        deletedItem = existing.find(it => it.id === id);
+        if (!deletedItem) return;
+        return existing.filter(it => it.id !== id);
+      });
+      if (success) {
+        const logged = await appendActivity('changes', {action:'예약 삭제',targetId:id,title:deletedItem?.title||'예약',changes:[]}, actor);
+        if (!logged) alert('예약 삭제는 완료됐지만 수정 이력 기록에 실패했습니다.');
+      }
+    }
+
+    function openLightbox(id) {
+      const it = items.find(i => i.id === id);
+      if (!it || !it.imageData) return;
+      document.getElementById('lightboxImg').src = it.imageData;
+      document.getElementById('lightboxOverlay').classList.add('active');
+    }
+    function closeLightbox() { document.getElementById('lightboxOverlay').classList.remove('active'); }
+
+    function exportData() {
+      if (!cloudLoaded) return alert('기존 예약정보를 불러오기 전에는 백업할 수 없습니다.');
+      if (!notesLoaded && !confirm('개인 메모 로딩이 완료되지 않았습니다. 예약정보만 백업할까요?')) return;
+      downloadJson({ tripStartDate, tripEndDate, items, personalNotes:notesLoaded ? personalNotes : undefined }, 'tokyo_trip_backup.json');
+    }
+    function importData(e) {
+      const f = e.target.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = async ev => {
+        try {
+          if (!requireCloudWrite() || !requireTraveler()) return;
+          const p = JSON.parse(ev.target.result);
+          if (!p || !Array.isArray(p.items) || !p.items.every(it => it && typeof it.id === 'string' && typeof it.title === 'string')) {
+            throw new Error('백업 파일의 예약 목록 형식이 올바르지 않습니다.');
+          }
+          if (!confirm('기존 예약은 수정하거나 삭제하지 않고, 백업에만 있는 새 예약을 추가할까요?')) return;
+          exportData(); // 복원 직전에 기존 데이터 백업
+          const ok = await changeItemsAtomically(existing => {
+            const ids = new Set(existing.map(it => it.id));
+            for (const it of p.items) if (!ids.has(it.id)) { existing.push(it); ids.add(it.id); }
+            return existing;
+          });
+          if (ok) {
+            let noteMessage = '';
+            if (p.personalNotes && typeof p.personalNotes === 'object' && !Array.isArray(p.personalNotes) && notesLoaded) {
+              try {
+                const restored = await firebaseDb.ref(MEMO_ROOT + currentRoomKey).transaction(current => {
+                  const existing = current && typeof current === 'object' ? current : {};
+                  for (const [key,note] of Object.entries(p.personalNotes)) {
+                    if (!Object.prototype.hasOwnProperty.call(existing,key) && note && TRAVELERS[note.author] && typeof note.text === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(key)) existing[key] = note;
+                  }
+                  return existing;
+                }, undefined, false);
+                if (!restored.committed) noteMessage = ' 메모 복원은 별도 확인이 필요합니다.';
+              } catch(e) { noteMessage = ' 개인 메모 복원 실패: ' + e.message; }
+            }
+            const actor = currentTraveler;
+            if (TRAVELERS[actor]) await appendActivity('changes', {action:'백업 복원',title:'기존 항목 유지·신규 추가',changes:[]});
+            closeShareModal(); alert('복원 완료: 기존 예약을 유지하며 새 항목만 추가했습니다.' + noteMessage);
+          }
+        } catch (err) { alert('복원 실패: ' + err.message); }
+        finally { e.target.value = ''; }
+      };
+      r.readAsText(f);
+    }
+    function safeExternalLink(link) {
+      try {
+        const parsed = new URL(String(link));
+        return (parsed.protocol === 'https:' || parsed.protocol === 'http:') ? parsed.href : '';
+      } catch (e) { return ''; }
+    }
+    function escapeHtml(t) { return t ? String(t).replace(/[&<>"']/g, s => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' })[s]) : ''; }
+  </script>
+</body>
+</html>
